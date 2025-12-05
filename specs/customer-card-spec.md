@@ -121,3 +121,136 @@ export interface CustomerCardProps {
 - [ ] Successfully integrates with mock data from `mockCustomers[0]`
 - [ ] No console errors or warnings during render
 - [ ] No layout shift during component mount
+
+## Integration Architecture
+
+### Component Interaction Diagram
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Main Dashboard Page                      │
+│                    (src/app/page.tsx)                        │
+└───────────────────────────┬─────────────────────────────────┘
+                            │
+                            │ renders multiple instances
+                            ▼
+                ┌───────────────────────────┐
+                │   CustomerSelector        │
+                │  (Future Component)       │
+                │  Grid/List Container      │
+                └─────────────┬─────────────┘
+                              │
+                              │ maps over customers array
+                              │ renders individual cards
+                              ▼
+                    ┌─────────────────────┐
+                    │   CustomerCard      │◄──── Customer data
+                    │   (This Component)  │
+                    └─────────────────────┘
+                              │
+                              │ imports types
+                              ▼
+                ┌──────────────────────────┐
+                │  @/data/mock-customers   │
+                │  - Customer interface    │
+                │  - mockCustomers array   │
+                └──────────────────────────┘
+```
+
+### Data Flow Description
+
+**Downstream Flow (Parent → CustomerCard)**
+1. **Data Source**: `mockCustomers` array from `@/data/mock-customers.ts` provides sample customer data
+2. **Parent Component** (future CustomerSelector): Passes individual `Customer` object as prop
+3. **CustomerCard**: Receives customer prop and renders display-only presentation
+4. **Rendering**: Component extracts properties (`name`, `company`, `healthScore`, `domains`) and applies conditional styling
+
+**Key Data Transformations**
+- **Health Score → Color Mapping**: Numeric score (0-100) transformed to color class:
+  - `0-30` → `bg-red-500` (Critical)
+  - `31-70` → `bg-yellow-500` (Moderate)
+  - `71-100` → `bg-green-500` (Healthy)
+- **Domain Array → Display Logic**:
+  - Single domain: Show full domain name
+  - Multiple domains: Show first domain + "+N more" badge
+  - No domains: Show "No domains" placeholder
+- **No upstream data flow**: Component is presentation-only (no callbacks, events, or state updates to parent)
+
+### Key Integration Points
+
+#### 1. Type System Integration
+```typescript
+import type { Customer } from '@/data/mock-customers';
+```
+- **Tight coupling**: Component relies on `Customer` interface definition
+- **Contract**: Any changes to `Customer` type directly impact component
+- **Validation**: TypeScript strict mode enforces type safety at compile time
+
+#### 2. Parent Component Integration (CustomerSelector)
+- **Usage Pattern**: `<CustomerCard customer={customer} />`
+- **Rendering Context**: Expected to be rendered within a grid/flex container
+- **Styling Considerations**: Component has minimum width (280px) but adapts to container
+- **No click handlers**: Current spec is display-only (future specs may add interactivity)
+
+#### 3. Mock Data Integration
+- **Development**: Uses `mockCustomers[0]` for testing during development
+- **Dynamic Import Pattern**: Main page uses try/catch dynamic imports to handle component existence
+```typescript
+const CustomerCard = require('../components/CustomerCard')?.default;
+const mockCustomers = require('../data/mock-customers')?.mockCustomers;
+```
+
+#### 4. Styling System Integration
+- **Tailwind CSS v4**: All styles via utility classes (no external CSS)
+- **Theme Variables**: Uses CSS variables from `globals.css` for consistency
+- **Responsive Design**: Inherits responsive behavior from parent grid layout
+
+### Dependencies on Previously Created Specs
+
+#### Direct Dependencies
+1. **Mock Data Specification** (Foundational)
+   - **File**: `src/data/mock-customers.ts`
+   - **Relationship**: CustomerCard depends on `Customer` interface definition
+   - **Breaking Changes Impact**: Changes to `Customer` type require component updates
+   - **Required Properties**: `id`, `name`, `company`, `healthScore`
+   - **Optional Properties**: `domains`, `email`, `subscriptionTier`, `createdAt`, `updatedAt`
+
+#### Future Dependencies (Planned)
+1. **CustomerSelector Component** (Exercise 4)
+   - **Relationship**: CustomerSelector will consume CustomerCard as child component
+   - **Integration Point**: CustomerSelector maps over customer array, rendering CustomerCard for each
+   - **Props Flow**: CustomerSelector passes individual customer objects to CustomerCard
+   - **Expected by**: Exercise 4 implementation
+
+2. **HealthScoreCalculator Service** (Future)
+   - **Relationship**: May provide business logic for health score calculations
+   - **Current State**: CustomerCard displays pre-calculated scores from mock data
+   - **Future Enhancement**: Dynamic health score calculation based on multiple metrics
+
+3. **Domain Health Monitoring Widget** (Exercise 5)
+   - **Relationship**: Both components display domain information
+   - **Shared Concern**: Domain URLs and health status
+   - **Potential Integration**: Click on domain badge could navigate to detailed domain health view
+
+#### No Dependencies On
+- ✓ External APIs (uses mock data exclusively)
+- ✓ State management libraries (Redux, Context, etc.)
+- ✓ Authentication/authorization systems
+- ✓ Backend services or databases
+- ✓ Other dashboard widgets (MarketIntelligence, PredictiveAlerts)
+
+#### Dependency Graph
+```
+[mock-customers.ts] ──── provides Customer type ───► [CustomerCard]
+                                                            │
+                                                            │ consumed by
+                                                            ▼
+[Dashboard Page] ──── uses (via dynamic import) ───► [CustomerSelector]
+                                                       (future component)
+```
+
+### Integration Constraints
+- **Read-only component**: No mutations to customer data
+- **Stateless**: No internal state management (fully controlled by props)
+- **No side effects**: No API calls, logging, or external interactions
+- **Isolated rendering**: Each card renders independently (suitable for virtualization)
