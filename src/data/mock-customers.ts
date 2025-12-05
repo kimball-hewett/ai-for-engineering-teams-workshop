@@ -3,6 +3,8 @@
  * Used throughout the Customer Intelligence Dashboard components
  */
 
+import type { CustomerHealthData } from '@/lib/healthCalculator';
+
 export interface Customer {
   id: string;
   name: string;
@@ -105,5 +107,153 @@ export const mockCustomers: Customer[] = [
     updatedAt: '2024-01-28T15:30:00Z'
   }
 ];
+
+/**
+ * Generates deterministic mock health data for a customer
+ *
+ * Creates realistic health factor data based on the customer's existing healthScore.
+ * Data generation is deterministic (same customerId always generates same data).
+ *
+ * Algorithm:
+ * - Uses customer ID as seed for deterministic pseudo-random generation
+ * - Aligns factor scores to approximate the customer's overall healthScore
+ * - Generates realistic values for all payment, engagement, contract, and support metrics
+ *
+ * @param customerId Customer identifier (used as deterministic seed)
+ * @returns CustomerHealthData with all health factors
+ */
+export function generateMockHealthData(customerId: string): CustomerHealthData {
+  // Find the customer to align with their existing health score
+  const customer = mockCustomers.find(c => c.id === customerId);
+  const targetHealthScore = customer?.healthScore ?? 50;
+
+  // Simple deterministic pseudo-random generator based on customer ID
+  const seed = parseInt(customerId, 10) || 1;
+  const random = (min: number, max: number, offset: number = 0): number => {
+    const x = Math.sin(seed * 12.9898 + offset * 78.233) * 43758.5453;
+    const rand = x - Math.floor(x);
+    return Math.floor(rand * (max - min + 1)) + min;
+  };
+
+  // Generate payment data aligned with health score
+  // Higher health score = better payment metrics
+  let paymentData;
+  if (targetHealthScore >= 71) {
+    // Healthy customers have excellent payment behavior
+    paymentData = {
+      daysSinceLastPayment: random(1, 7, 1),
+      averagePaymentDelay: random(-5, 0, 2),
+      overdueAmount: 0,
+      totalPayments: random(10, 50, 3),
+    };
+  } else if (targetHealthScore >= 31) {
+    // Warning customers have moderate payment issues
+    paymentData = {
+      daysSinceLastPayment: random(8, 30, 1),
+      averagePaymentDelay: random(0, 10, 2),
+      overdueAmount: random(0, 3000, 3),
+      totalPayments: random(5, 20, 3),
+    };
+  } else {
+    // Critical customers have serious payment problems
+    paymentData = {
+      daysSinceLastPayment: random(31, 90, 1),
+      averagePaymentDelay: random(15, 45, 2),
+      overdueAmount: random(3000, 15000, 3),
+      totalPayments: random(1, 10, 3),
+    };
+  }
+
+  // Generate engagement data aligned with health score
+  let engagementData;
+  if (targetHealthScore >= 71) {
+    // Healthy customers are highly engaged
+    engagementData = {
+      loginFrequency: random(20, 40, 4),
+      featureUsageCount: random(10, 20, 5),
+      lastLoginDays: random(0, 5, 6),
+      activeUsers: random(10, 50, 7),
+    };
+  } else if (targetHealthScore >= 31) {
+    // Warning customers have moderate engagement
+    engagementData = {
+      loginFrequency: random(5, 15, 4),
+      featureUsageCount: random(3, 8, 5),
+      lastLoginDays: random(7, 20, 6),
+      activeUsers: random(3, 15, 7),
+    };
+  } else {
+    // Critical customers have poor engagement
+    engagementData = {
+      loginFrequency: random(0, 5, 4),
+      featureUsageCount: random(1, 3, 5),
+      lastLoginDays: random(30, 90, 6),
+      activeUsers: random(1, 5, 7),
+    };
+  }
+
+  // Generate contract data aligned with health score
+  let contractData;
+  if (targetHealthScore >= 71) {
+    // Healthy customers have stable, long-term contracts
+    contractData = {
+      daysUntilRenewal: random(90, 300, 8),
+      contractValue: random(50000, 200000, 9),
+      recentUpgrades: random(0, 1, 10) === 1,
+      contractLength: random(12, 36, 11),
+    };
+  } else if (targetHealthScore >= 31) {
+    // Warning customers approaching renewal or medium-value
+    contractData = {
+      daysUntilRenewal: random(30, 90, 8),
+      contractValue: random(10000, 50000, 9),
+      recentUpgrades: false,
+      contractLength: random(6, 12, 11),
+    };
+  } else {
+    // Critical customers have contract risk
+    contractData = {
+      daysUntilRenewal: random(-30, 30, 8),
+      contractValue: random(5000, 20000, 9),
+      recentUpgrades: false,
+      contractLength: random(3, 12, 11),
+    };
+  }
+
+  // Generate support data aligned with health score
+  let supportData;
+  if (targetHealthScore >= 71) {
+    // Healthy customers have minimal support issues
+    supportData = {
+      averageResolutionTime: random(4, 20, 12),
+      satisfactionScore: random(4, 5, 13) as 1 | 2 | 3 | 4 | 5,
+      escalationCount: random(0, 1, 14),
+      openTickets: random(0, 2, 15),
+    };
+  } else if (targetHealthScore >= 31) {
+    // Warning customers have moderate support needs
+    supportData = {
+      averageResolutionTime: random(24, 60, 12),
+      satisfactionScore: random(3, 4, 13) as 1 | 2 | 3 | 4 | 5,
+      escalationCount: random(2, 4, 14),
+      openTickets: random(3, 6, 15),
+    };
+  } else {
+    // Critical customers have significant support problems
+    supportData = {
+      averageResolutionTime: random(60, 120, 12),
+      satisfactionScore: random(1, 2, 13) as 1 | 2 | 3 | 4 | 5,
+      escalationCount: random(5, 10, 14),
+      openTickets: random(7, 15, 15),
+    };
+  }
+
+  return {
+    payment: paymentData,
+    engagement: engagementData,
+    contract: contractData,
+    support: supportData,
+  };
+}
 
 export default mockCustomers;

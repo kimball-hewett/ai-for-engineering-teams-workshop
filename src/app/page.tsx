@@ -1,46 +1,180 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useState } from 'react';
+import type { Customer } from '@/data/mock-customers';
 
 // Dynamic component imports with error boundaries
-const CustomerCardDemo = () => {
+const CustomerSelectorDemo = () => {
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+
   try {
-    // Try to import CustomerCard - this will work after Exercise 3
-    const CustomerCard = require('../components/CustomerCard')?.default;
+    const CustomerSelector = require('../components/CustomerSelector')?.default;
     const mockCustomers = require('../data/mock-customers')?.mockCustomers;
 
-    if (CustomerCard && mockCustomers?.length > 0) {
+    if (CustomerSelector && mockCustomers?.length > 0) {
       return (
         <div className="space-y-4">
-          <p className="text-green-600 text-sm font-medium">✅ CustomerCard implemented! Showing all {mockCustomers.length} customers</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {mockCustomers.map((customer: any) => (
-              <CustomerCard key={customer.id} customer={customer} />
-            ))}
+          <p className="text-green-600 text-sm font-medium">✅ CustomerSelector with search and selection</p>
+          <CustomerSelector
+            customers={mockCustomers}
+            onCustomerSelect={(customer: Customer) => setSelectedCustomer(customer)}
+            initialSelectedId={mockCustomers[0]?.id}
+          />
+          {selectedCustomer && (
+            <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+              <p className="text-sm text-blue-900">
+                <strong>Selected:</strong> {selectedCustomer.name} at {selectedCustomer.company}
+              </p>
+            </div>
+          )}
+        </div>
+      );
+    }
+  } catch (error) {
+    console.error('CustomerSelector error:', error);
+  }
+
+  return (
+    <div className="text-gray-500 text-sm">
+      CustomerSelector component will appear here when implemented.
+    </div>
+  );
+};
+
+const CustomerHealthDemo = () => {
+  try {
+    const CustomerHealthDisplay = require('../components/CustomerHealthDisplay')?.default;
+    const { mockCustomers, generateMockHealthData } = require('../data/mock-customers');
+
+    if (CustomerHealthDisplay && mockCustomers?.length > 0) {
+      const customer = mockCustomers[0];
+      const healthData = generateMockHealthData(customer.id);
+
+      return (
+        <div className="space-y-4">
+          <p className="text-green-600 text-sm font-medium">✅ Health Score Calculator with factor breakdown</p>
+          <CustomerHealthDisplay
+            customerId={customer.id}
+            healthData={healthData}
+            onError={(error) => console.error('Health calculation error:', error)}
+          />
+        </div>
+      );
+    }
+  } catch (error) {
+    console.error('CustomerHealthDisplay error:', error);
+  }
+
+  return (
+    <div className="text-gray-500 text-sm">
+      CustomerHealthDisplay component will appear here when implemented.
+    </div>
+  );
+};
+
+const MarketIntelligenceDemo = () => {
+  try {
+    const MarketIntelligenceWidget = require('../components/MarketIntelligenceWidget')?.default;
+    const { mockCustomers } = require('../data/mock-customers');
+
+    if (MarketIntelligenceWidget && mockCustomers?.length > 0) {
+      return (
+        <div className="space-y-4">
+          <p className="text-green-600 text-sm font-medium">✅ Market Intelligence with sentiment analysis</p>
+          <div className="border rounded-lg p-4">
+            <MarketIntelligenceWidget
+              company={mockCustomers[0].company}
+              autoRefresh={false}
+              onError={(error) => {
+                console.error('Market intelligence error:', error);
+                alert(`Market Intelligence Error: ${error.message}`);
+              }}
+              onDataLoaded={(data) => {
+                console.log('Market data loaded successfully:', data);
+              }}
+            />
           </div>
         </div>
       );
     }
   } catch (error) {
-    // Component doesn't exist yet
+    console.error('MarketIntelligenceWidget component error:', error);
+    return (
+      <div className="text-red-600 text-sm p-4 bg-red-50 rounded-lg">
+        <strong>Error loading MarketIntelligenceWidget:</strong> {String(error)}
+      </div>
+    );
   }
 
   return (
     <div className="text-gray-500 text-sm">
-      After Exercise 3, your CustomerCard components will appear here showing customer information with health scores.
+      MarketIntelligenceWidget component will appear here when implemented.
     </div>
   );
 };
 
-const DashboardWidgetDemo = ({ widgetName, exerciseNumber }: { widgetName: string, exerciseNumber: number }) => {
+const PredictiveAlertsDemo = () => {
+  try {
+    const PredictiveIntelligenceWidget = require('../components/PredictiveIntelligenceWidget')?.default;
+    const { mockCustomers, generateMockHealthData } = require('../data/mock-customers');
+    const { alertsService } = require('../services/alertsService');
+    const { marketIntelligenceService } = require('../services/marketIntelligenceService');
+
+    if (PredictiveIntelligenceWidget && mockCustomers?.length > 0) {
+      // Generate sample alerts
+      const customersWithHealth = mockCustomers.slice(0, 3).map((customer: any) => ({
+        ...customer,
+        healthData: generateMockHealthData(customer.id),
+      }));
+
+      const alerts = alertsService.getActiveAlerts();
+
+      return (
+        <div className="space-y-4">
+          <p className="text-green-600 text-sm font-medium">✅ Predictive Intelligence Platform with alerts</p>
+          <p className="text-sm text-gray-600 mb-4">
+            Click "Generate Sample Alerts" to see the alert system in action
+          </p>
+          <button
+            onClick={async () => {
+              await alertsService.generateAlerts(
+                customersWithHealth,
+                async (company: string) => marketIntelligenceService.fetchMarketIntelligence(company)
+              );
+              window.location.reload();
+            }}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Generate Sample Alerts
+          </button>
+          <PredictiveIntelligenceWidget
+            alerts={alerts}
+            onDismissAlert={(id) => {
+              alertsService.dismissAlert(id);
+              window.location.reload();
+            }}
+            onResolveAlert={(id, action, notes) => {
+              alertsService.resolveAlert(id, action, notes);
+              window.location.reload();
+            }}
+            onRefreshMarketData={async (company) => {
+              await marketIntelligenceService.refreshMarketIntelligence(company);
+            }}
+          />
+        </div>
+      );
+    }
+  } catch (error) {
+    console.error('PredictiveIntelligenceWidget error:', error);
+  }
+
   return (
-    <div className="border-2 border-dashed border-gray-200 rounded-lg p-4 text-center text-gray-500 text-sm">
-      {widgetName}
-      <br />
-      <span className="text-xs">Exercise {exerciseNumber}</span>
+    <div className="text-gray-500 text-sm">
+      PredictiveIntelligenceWidget component will appear here when implemented.
     </div>
   );
 };
+
 
 export default function Home() {
   return (
@@ -57,46 +191,73 @@ export default function Home() {
 
       {/* Progress Indicator */}
       <div className="mb-8 bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold mb-4">Workshop Progress</h2>
-        <div className="space-y-2 text-sm text-gray-600">
-          <p>✅ Setup Complete - Next.js app is running</p>
-          <p className="text-gray-400">⏳ Exercise 3: CustomerCard component (implement to see here)</p>
-          <p className="text-gray-400">⏳ Exercise 4: CustomerSelector integration</p>
-          <p className="text-gray-400">⏳ Exercise 5: Domain Health widget</p>
-          <p className="text-gray-400">⏳ Exercise 9: Production-ready features</p>
+        <h2 className="text-xl font-semibold mb-4">Implementation Status</h2>
+        <div className="space-y-2 text-sm">
+          <p className="text-green-600">✅ CustomerCard - Display customer info with health scores</p>
+          <p className="text-green-600">✅ CustomerSelector - Search and select customers</p>
+          <p className="text-green-600">✅ CustomerHealthDisplay - Health score calculator with breakdown</p>
+          <p className="text-green-600">✅ MarketIntelligenceWidget - Market sentiment and news analysis</p>
+          <p className="text-green-600">✅ PredictiveIntelligence - Alert system with market enrichment</p>
         </div>
       </div>
 
       {/* Component Showcase Area */}
       <div className="space-y-8">
-        {/* CustomerCard Section */}
+        {/* CustomerSelector Section */}
         <section className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold mb-4">CustomerCard Component</h3>
+          <h3 className="text-lg font-semibold mb-4">1. CustomerSelector Component</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Interactive customer selector with search, filtering, and selection. Try searching by name or company!
+          </p>
           <Suspense fallback={<div className="text-gray-500">Loading...</div>}>
-            <CustomerCardDemo />
+            <CustomerSelectorDemo />
           </Suspense>
         </section>
 
-        {/* Dashboard Widgets Section */}
+        {/* Customer Health Section */}
         <section className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold mb-4">Dashboard Widgets</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <DashboardWidgetDemo widgetName="Domain Health Widget" exerciseNumber={5} />
-            <DashboardWidgetDemo widgetName="Market Intelligence" exerciseNumber={6} />
-            <DashboardWidgetDemo widgetName="Predictive Alerts" exerciseNumber={8} />
-          </div>
+          <h3 className="text-lg font-semibold mb-4">2. Customer Health Display</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Multi-factor health score calculator showing payment, engagement, contract, and support metrics.
+          </p>
+          <Suspense fallback={<div className="text-gray-500">Loading...</div>}>
+            <CustomerHealthDemo />
+          </Suspense>
         </section>
 
-        {/* Getting Started */}
-        <section className="bg-blue-50 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-blue-900 mb-2">Ready to Start Building?</h3>
-          <p className="text-blue-800 mb-4">
-            Follow along with the workshop exercises to see this dashboard come to life with AI-generated components.
+        {/* Market Intelligence Section */}
+        <section className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold mb-4">3. Market Intelligence Widget</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Real-time market sentiment analysis with news headlines and refresh capability.
           </p>
-          <div className="text-sm text-blue-700">
-            <p className="mb-1"><strong>Next:</strong> Exercise 1 - Create your first specification</p>
-            <p className="mb-1"><strong>Then:</strong> Exercise 3 - Generate your first component</p>
-            <p className="text-xs text-blue-600">💡 Tip: Refresh this page after completing exercises to see your progress!</p>
+          <Suspense fallback={<div className="text-gray-500">Loading...</div>}>
+            <MarketIntelligenceDemo />
+          </Suspense>
+        </section>
+
+        {/* Predictive Intelligence Section */}
+        <section className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold mb-4">4. Predictive Intelligence Platform</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Advanced alert system combining internal health metrics with external market intelligence.
+          </p>
+          <Suspense fallback={<div className="text-gray-500">Loading...</div>}>
+            <PredictiveAlertsDemo />
+          </Suspense>
+        </section>
+
+        {/* API Endpoints */}
+        <section className="bg-green-50 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-green-900 mb-2">API Endpoints Available</h3>
+          <div className="space-y-2 text-sm text-green-800">
+            <p><strong>GET</strong> <code className="bg-green-100 px-2 py-1 rounded">/api/market-intelligence/[company]</code></p>
+            <p className="text-xs text-green-700 ml-4">
+              Example: <code>/api/market-intelligence/Acme%20Corp</code>
+            </p>
+            <p className="text-xs text-green-700 ml-4">
+              Query params: <code>?refresh=true</code> to bypass cache
+            </p>
           </div>
         </section>
       </div>
