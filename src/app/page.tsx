@@ -8,14 +8,15 @@ const CustomerCardDemo = () => {
     // Try to import CustomerCard - this will work after Exercise 3
     const CustomerCard = require('../components/CustomerCard')?.default;
     const mockCustomers = require('../data/mock-customers')?.mockCustomers;
-    
-    if (CustomerCard && mockCustomers?.[0]) {
+
+    if (CustomerCard && mockCustomers?.length > 0) {
       return (
         <div className="space-y-4">
-          <p className="text-green-600 text-sm font-medium">✅ CustomerCard implemented!</p>
-          <div className="flex flex-wrap gap-4">
-            <CustomerCard customer={mockCustomers[0]} />
-            <CustomerCard customer={mockCustomers[1]} />
+          <p className="text-green-600 text-sm font-medium">✅ CustomerCard implemented! Showing all {mockCustomers.length} customers</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {mockCustomers.map((customer: any) => (
+              <CustomerCard key={customer.id} customer={customer} />
+            ))}
           </div>
         </div>
       );
@@ -23,7 +24,7 @@ const CustomerCardDemo = () => {
   } catch (error) {
     // Component doesn't exist yet
   }
-  
+
   return (
     <div className="text-gray-500 text-sm">
       After Exercise 3, your CustomerCard components will appear here showing customer information with health scores.
